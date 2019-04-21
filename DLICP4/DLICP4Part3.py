@@ -36,9 +36,6 @@ labels = np.array(['airplane','automobile','bird', 'cat', 'deer', 'dog', 'frog',
 
 model = load_model('ICP4_weights.h5')
 
-right = 0
-mistake = 0
-
 for i in range(4):
     index = i
     print(index)
@@ -60,13 +57,7 @@ for i in range(4):
 
     if y_test[index] == iclass:
         print("Prediction [{}].".format(labels[iclass]))
-        right += 1
     else:
         print("Prediction: [{}]".format(labels[iclass]))
         print("Incorrect: [{}]".format(labels[y_test[index][0]]))
-        mistake += 1
     print()
-
-print("The number of correct answers:", right)
-print("The number of mistake:", mistake)
-print("A correct answer rate:", right / (mistake + right) * 100, '%')
