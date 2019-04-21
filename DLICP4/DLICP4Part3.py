@@ -20,6 +20,7 @@ from keras import backend as K
 import tensorflow
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from keras.models import load_model
 
 K.set_image_dim_ordering('th')
 
@@ -27,68 +28,45 @@ K.set_image_dim_ordering('th')
 seed = 7
 np.random.seed(seed)
 # load data
-(X_train, y_train), (X_test, y_test) = cifar10.load_data()
-X_train = X_train[:6000]
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+x_train = x_train[:6000]
 y_train = y_train[:6000]
 
-# normalize inputs from 0-255 to 0.0-1.0
-X_train = X_train.astype('float32')
-X_test = X_test.astype('float32')
-X_train = X_train / 255.0
-X_test = X_test / 255.0
+labels = np.array(['airplane','automobile','bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck'])
 
-# one hot encode outputs
-y_train = np_utils.to_categorical(y_train)
-y_test = np_utils.to_categorical(y_test)
-num_classes = y_test.shape[1]
+model = load_model('ICP4_weights.h5')
 
-# Create the model
-model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=(3, 32, 32), padding='same', activation='relu', kernel_constraint=maxnorm(3)))
-model.add(Dropout(0.2))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
-model.add(Dropout(0.2))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
-model.add(Dropout(0.2))
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same', kernel_constraint=maxnorm(3)))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Flatten())
-model.add(Dropout(0.2))
-model.add(Dense(1024, activation='relu', kernel_constraint=maxnorm(3)))
-model.add(Dropout(0.2))
-model.add(Dense(512, activation='relu', kernel_constraint=maxnorm(3)))
-model.add(Dropout(0.2))
-model.add(Dense(num_classes, activation='softmax'))
+right = 0
+mistake = 0
 
-# Compile model
-#Using 1 epoch for speed so i can test code easier before switching back to bigger epochs
-epochs = 1
-lrate = 0.01
-decay = lrate/epochs
-sgd = SGD(lr=lrate, momentum=0.9, decay=decay, nesterov=False)
-model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-print(model.summary())
+for i in range(4):
+    index = i
+    print(index)
+    image = x_test[index]
+    img = image.astype('float32')
+    img /= 255
+    data = np.zeros(32 * 32 * 3).reshape((1, 3, 32, 32))
+    data[0]=img
 
-# Fit the model
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=32)
+    pred = model.predict(data, batch_size=1)
 
-#model.load_weights('ICP4_weights.h5')
+    num = 0.0
+    iclass = 0
 
-# Final evaluation of the model
-scores = model.evaluate(X_test, y_test, verbose=0)
-print("Accuracy: %.2f%%" % (scores[1]*100))
+    for n in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+        if num < pred[0][n]:
+            num = pred[0][n]
+            iclass = n
 
-# I think this is finally working correctly. It took me a while to figure out.
-image = X_test[0]
-img = np.zeros(32*32*3).reshape((1,3,32,32))
-img[0] = image
+    if y_test[index] == iclass:
+        print("Prediction [{}].".format(labels[iclass]))
+        right += 1
+    else:
+        print("Prediction: [{}]".format(labels[iclass]))
+        print("Incorrect: [{}]".format(labels[y_test[index][0]]))
+        mistake += 1
+    print()
 
-pred = model.predict(img, batch_size=1)
-print(pred)
-
-# I need to set up labels for the cifar10 dataset then use to see what is being predicted. Then expand the code in a
-# for loop for the additional 3 other values to be tested.
+print("The number of correct answers:", right)
+print("The number of mistake:", mistake)
+print("A correct answer rate:", right / (mistake + right) * 100, '%')
